@@ -138,7 +138,7 @@ On the left side, you should see a list of items. Click on "Cookies" and then se
 
 ### Using an environment variable
 
-If you prefer to not repeatedly have to enter the `canvas_session` with the `-s` flag, you can certainly export it as an environment variable. This is done by running the following command in your terminal:
+If you prefer to not repeatedly have to enter the `canvas_session` with the `--canvas-session` flag, you can certainly export it as an environment variable. This is done by running the following command in your terminal:
 
 ```bash
 export CANVAS_SESSION=Ggx-OQY...
