@@ -2,7 +2,7 @@
 
 A tool to explore a canvas course, and potentially find homework solutions and exams from previous semesters. **This does not work for every course.** This only works if a professor re-initializes a course that he/she has taught before.
 
-**Video demo**: TODO
+**Video demo**: https://youtu.be/7f0Lu8lJ3iI
 
 **Discord Server:** https://discord.gg/k7yNftGEAA
 
