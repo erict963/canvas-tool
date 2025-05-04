@@ -92,7 +92,7 @@ def sweep_files_reverse(start: int,
                 
                 queue.put({
                     'id': i,
-                    'url': f'{url.replace('/api/v1', '')}/{i}',
+                    'url': f"{url.replace('/api/v1', '')}/{i}",
                     'display_name': response_data.get('display_name'),
                     'created_at': response_data.get('created_at'),
                     'download_url': response_data.get('url')
