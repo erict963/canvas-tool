@@ -215,3 +215,14 @@ However, the frontend will still show the old file ID `1` as a valid file, and r
 This is why using this script to search via API may "miss" some files - the frontend relies on the API to report the correct data. Note, the frontend search will always "hit" every ID that exists.
 
 This is not necessarily a bad thing, because our entire goal is to get the "old files" that aren't currently available to the public.
+
+## Using the `--forward` flag
+
+The `--forward` flag allows you to search for files in the forward direction. This means that instead of starting at a given file ID and decrementing, it will start at a given file ID and increment. Using the above example, if you start at `456000`, it will check the following URLs:
+
+```
+https://canvas.example.edu/api/v1/courses/123/files/456001
+https://canvas.example.edu/api/v1/courses/123/files/456002
+...
+https://canvas.example.edu/api/v1/courses/123/files/466000 // Potential Final Exam that hasn't been released yet
+```

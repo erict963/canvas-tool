@@ -41,11 +41,11 @@ def parse_response(response: urllib.response):
     else:
         raise Exception(f'Unexpected content type: {response.headers.get("Content-Type")}')
 
-def sweep_files_reverse(start: int,
-                        increment: int, 
-                        stop: int,
-                        url: str, 
-                        **kwargs):
+def sweep_files(start: int,
+                increment: int, 
+                stop: int,
+                url: str, 
+                **kwargs):
     """
     Polls url, starting from file_id = start - 1 (skipping start)
     and decrementing by increment. Stops when it reaches file_id = stop.
@@ -56,7 +56,7 @@ def sweep_files_reverse(start: int,
         otherwise, stop the thread and return the queue.
     
     Example:
-    >> sweep_files_reverse(start=10, increment=2, url='https://example.com/files', stop=0)
+    >> sweep_files(start=10, increment=2, url='https://example.com/files', stop=0)
     would create the following threads:
     Thread 1: will explore the odd file_ids:
         https://example.com/files/9
@@ -72,14 +72,23 @@ def sweep_files_reverse(start: int,
 
     By decrementing by the number of threads, we guarantee that
     we can explore all file_ids in the range (stop, start].
+
+    If the `forward` argument is set to True, the function will
+    explore the file_ids in the range (start, stop], incrementing by the number of threads.
     """
-    assert start > stop, "start must be greater than stop"
+    if kwargs.get('forward'):
+        assert start < stop, f"Starting id ({start}) must be less than stopping id ({stop})."
+    else:
+        assert start > stop, f"Starting id ({start}) must be greater than stopping id ({stop})."
+        assert stop >= 0, f"Cannot have negative file ids (ending id: {stop}). Try decreasing --num-files"
+    assert increment > 0, "increment must be greater than 0"
+
     stop_signal = Event()
     queue = Queue()
 
     def process(start: int, increment: int, stop: int, url: str):
         start_time = time.time()
-        for i in range(start, stop - 1, increment):
+        for i in range(start, stop, increment):
             if stop_signal.is_set(): return
 
             try:
@@ -106,7 +115,7 @@ def sweep_files_reverse(start: int,
                     # print(f'Error body: {e.read().decode("utf-8")}')
                     stop_signal.set()
                     return
-                if i % kwargs['log_every'] == 0:
+                if i % kwargs.get('log_every') == 0:
                     time_per_item = (time.time() - start_time) / max(start - i, 1)
                     logging.info(f'Status: {e.code} -- File Id: {i} -- TMR: {time_per_item * (i - stop) / 60:.2f} min')
                 continue
@@ -115,15 +124,25 @@ def sweep_files_reverse(start: int,
                 stop_signal.set()
                 return
 
-    threads = [ 
-        Thread(target=process, 
-                args=(
-                        start + (i * -1) - 1, # skip start
-                        increment * -1, 
-                        stop,
-                        url
-                    )) for i in range(increment) 
-    ]
+    if kwargs.get('forward'):
+        threads = [ 
+            Thread(target=process, 
+                    args=(
+                            start + (i * 1) + 1, # skip start
+                            increment * 1, 
+                            stop + 1,
+                            url
+                        )) for i in range(increment) ]
+    else:
+        threads = [ 
+            Thread(target=process, 
+                    args=(
+                            start + (i * -1) - 1, # skip start
+                            increment * -1, 
+                            stop - 1,
+                            url
+                        )) for i in range(increment) 
+        ]
     
     for thread in threads:
         thread.start()
@@ -196,6 +215,9 @@ def main():
     parser.add_argument('--use-api', 
                         action='store_true', 
                         help='Experimental: Use the Canvas API instead of the frontend (default: False) - this will be faster but may not necessarily find all files.  See README for more details.')
+    parser.add_argument('--forward',
+                        action='store_true', 
+                        help='use forward search instead of reverse search (default: False). See README for more details.')
     args = parser.parse_args()
 
     # check if canvas session is provided
@@ -216,7 +238,7 @@ def main():
     url = f'{url}/files'
     
 
-    # inject the canvas canvas session 
+    # inject the canvas session 
     opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(CookieJar()))
     opener.addheaders = [
         ('Cookie', f'canvas_session={args.canvas_session}'),
@@ -235,12 +257,13 @@ def main():
     
     try_frontend(args.url)
         
-    results = sweep_files_reverse(
+    results = sweep_files(
         start=start,
         increment=args.num_workers,
-        stop=start - args.num_files,
+        stop=start + args.num_files if args.forward else start - args.num_files,
         url=url,
-        log_every=args.log_every
+        log_every=args.log_every,
+        forward=args.forward
     )
 
     results = sorted(results, key=lambda x: x.get('id'), reverse=True)
