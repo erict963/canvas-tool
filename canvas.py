@@ -116,8 +116,12 @@ def sweep_files(start: int,
                     stop_signal.set()
                     return
                 if i % kwargs.get('log_every') == 0:
-                    time_per_item = (time.time() - start_time) / max(start - i, 1)
-                    logging.info(f'Status: {e.code} -- File Id: {i} -- TMR: {time_per_item * (i - stop) / 60:.2f} min')
+                    if kwargs.get('forward'):
+                        time_per_item = (time.time() - start_time) / max(i - start, 1)
+                        logging.info(f'Status: {e.code} -- File Id: {i} -- TMR: {time_per_item * (stop - i) / 60:.2f} min')
+                    else:
+                        time_per_item = (time.time() - start_time) / max(start - i, 1)
+                        logging.info(f'Status: {e.code} -- File Id: {i} -- TMR: {time_per_item * (i - stop) / 60:.2f} min')
                 continue
             except Exception as e:
                 logging.error(f'Unexpected error for File Id: {i} --> {str(e)}')
